@@ -230,8 +230,7 @@ print("*"*25)
 print("Coby's Epic Photo Sorting Machine")
 print("*"*25 + "\n")
 
-enter = "C:\\Users\\cobyl\\Documents\\photosorter\\pho"
-output = "./con"
-
+enter = input("Enter input dir: ")
+output = input("Enter outpur dir: ")
 makePaths()
 get_photos(enter, output)
