@@ -12,7 +12,8 @@ import threading
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class photo():
-	def __init__(self, name, dir_, dest, ext):
+	def __init__(self, name, dir_, dest, ext,dev):
+		self.dev = dev
 		self.rubbish = False
 		self.dup = False
 		self.quit = False
@@ -28,10 +29,6 @@ class photo():
 			if self.quit == False:	
 				self.new_name = self.hash + "." + self.ext
 				self.photoMover()
-
-	def no_data(self):
-		shutil.move(self.dir_, "{}\\Unsorted\\{}".format(self.dest, self.name))
-		self.quit = True
 
 	def FindDateTimeOffsetFromCR2(self, buffer, ifd_offset ):
 		try:
@@ -96,12 +93,18 @@ class photo():
 					if "DateTimeOriginal" in ret.keys():
 						dt = ret["DateTimeOriginal"]
 					else:
-						self.no_data()
+						i.close()
+						shutil.move(self.dir_, "{}\\Unsorted\\{}".format(self.dest, self.name))
+						self.quit = True
+						return None
 				elif self.ext == "jpg" or self.ext == "JPG" or self.ext == "jpeg":
 					if "DateTimeDigitized" in ret.keys():
 						dt = ret["DateTimeDigitized"]
 					else:
-						self.no_data()
+						i.close()
+						shutil.move(self.dir_, "{}\\Unsorted\\{}".format(self.dest, self.name))
+						self.quit = True
+						return None
 			elif self.ext == "cr2" or self.ext == "CR2":
 				with open(imagename, "rb") as f:
 					buffer = f.read(1024) # read the first 1kb of the file should be enough to find the date / time
@@ -163,10 +166,14 @@ class photo():
 			self.write_exception(e,"Mover")
 
 	def write_exception(self, exceptionNote,func):
+		if self.dev:
+			print(str(exceptionNote) + " ::: "+func+"\n")
 		with open("{}/exceptions.txt".format(output), "a") as fb:
 			fb.write(str(exceptionNote) + " ::: "+func+"\n")
 
-def outer_exception(exceptionNote):
+def outer_exception(exceptionNote,dev):
+	if dev:
+		print(str(exceptionNote)+"\n")
 	with open("{}/exceptions.txt".format(output), "a") as fb:
 		fb.write(str(exceptionNote) + "\n")
 
@@ -198,39 +205,50 @@ def makePaths():
 		else:
 		    os.mkdir(file_path)
 	except Exception as e:
-		outer_exception(e)
+		outer_exception(e,dev)
 		sys.exit()
 
-def sort_photos(dir_,output,photoNames):
+def sort_photos(dir_,output,photoNames,dev):
 	types = ["png", "jpg", "JPG", "jpeg","CR2","cr2"]
 	for name in photoNames:
 			photo_location = "{}\\{}".format(dir_,name)
 			if name.split(".")[1] in types:
 				ext = name.split(".")[1]
-				photo(name, photo_location, output, ext)
+				phin = photoNames.index(name)
+				print(phin)
+				perc = round((phin/len(photoNames)) * 100, 1)
+				print("Photo number {} out of {}. {}%".format(phin+1, len(photoNames), perc))
+				photo(name, photo_location, output, ext,dev)
 			else:
 				shutil.move(photo_location, "{}\\Unsorted\\{}".format(output, name))
 
-def get_photos(dir_, output):
+def get_photos(dir_, output,dev):
 	try:
 		file_path = "{}/hashes.txt".format(output)
 		photoNames = os.listdir(dir_)
 		if len(photoNames) == 0:
 			print("No photos in", dir_)
 			sys.exit()
-		sort_photos(dir_,output,photoNames)
+		print("Total number of photos to sort: {}".format(len(photoNames)))
+		sort_photos(dir_,output,photoNames,dev)
 		
 
 	except Exception as e:
-		outer_exception(e)
+		outer_exception(e,dev)
 		sys.exit()
 
 
 print("*"*25)
 print("Coby's Epic Photo Sorting Machine")
 print("*"*25 + "\n")
+dev = True if input("Would you like to enter devMode (y/n): ").lower() == "y" else False
 
-enter = input("Enter input dir: ")
-output = input("Enter outpur dir: ")
+if dev:
+	enter = "C:\\Users\\cobyl\\Documents\\photosorter\\pho"
+	output = "./con"
+else:
+	enter = input("Input Dir: ")
+	output = input("Output Dir: ")
+
 makePaths()
-get_photos(enter, output)
+get_photos(enter, output, dev)
